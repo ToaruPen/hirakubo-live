@@ -16,6 +16,7 @@ hirakubo_loop.py, used to check the port against its frames) and "live".
 import base64
 import io
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -47,6 +48,7 @@ from hirakubo_pixel import (
 ROOT = Path(__file__).resolve().parent
 TEMPLATE = ROOT / "hirakubo_live.template.html"
 ENV_JS = ROOT / "hirakubo_env.js"  # sun, moon, sky light and weather; inlined into the page
+LIVE_JS = ROOT / "hirakubo_live.js"  # the engine; inlined into the page
 OUT_FRAGMENT = ROOT / "hirakubo_live.html"  # Artifact page (the host adds <head>)
 OUT_WE = ROOT / "hirakubo_live" / "index.html"  # full document for Wallpaper Engine
 FIX = 2**18  # 24-bit fixed point for value fields
@@ -470,10 +472,16 @@ def verify_split(phys, st, L, frames=(0, 360, 1100)):
 
 def write_pages(data):
     tpl = TEMPLATE.read_text()
-    blob = json.dumps(data, separators=(",", ":"))
-    env_js = ENV_JS.read_text()
-    assert "</script" not in env_js
-    frag = tpl.replace("/*__HK_DATA__*/", blob).replace("/*__HK_ENV__*/", env_js)
+    parts = {
+        "DATA": json.dumps(data, separators=(",", ":")),
+        "ENV": ENV_JS.read_text(),
+        "LIVE": LIVE_JS.read_text(),
+    }
+    for name, text in parts.items():
+        assert tpl.count(f"/*__HK_{name}__*/") == 1, name
+        assert "</script" not in text, name
+    # one pass, so text put in for one placeholder is never searched for another
+    frag = re.sub(r"/\*__HK_(\w+)__\*/", lambda m: parts[m.group(1)], tpl)
     OUT_FRAGMENT.write_text(frag)
     OUT_WE.parent.mkdir(exist_ok=True)
     OUT_WE.write_text(

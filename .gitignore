@@ -1,7 +1,6 @@
 # build products (python3 hirakubo_live_build.py / pnpm build)
 /hirakubo_live/
 /hirakubo_live.html
-/.lint/
 # loop videos and frames written by hirakubo_loop.py (tens of MB each)
 *.mp4
 /frames/
