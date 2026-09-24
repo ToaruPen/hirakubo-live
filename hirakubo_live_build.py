@@ -72,9 +72,7 @@ def arr(a, dtype):
 
 def png(rgb):
     buf = io.BytesIO()
-    Image.fromarray(np.ascontiguousarray(rgb, np.uint8), "RGB").save(
-        buf, "PNG", optimize=True
-    )
+    Image.fromarray(np.ascontiguousarray(rgb, np.uint8), "RGB").save(buf, "PNG", optimize=True)
     return {
         "uri": "data:image/png;base64," + base64.b64encode(buf.getvalue()).decode(),
         "sum": int(np.asarray(rgb, np.int64).sum()),
@@ -126,8 +124,17 @@ def static_split(st):
         blobs |= m
     rock = blobs & (t2 == 2) & np.all(c2[..., None, :] == np.array(PAL["stone"]), -1).any(-1)
     return dict(
-        t1=t1, c1=c1, t2=t2, c2=c2, pshadow=pshadow, pmask=pm, post=post, isle=isle,
-        path=path, built=built, rock=rock,
+        t1=t1,
+        c1=c1,
+        t2=t2,
+        c2=c2,
+        pshadow=pshadow,
+        pmask=pm,
+        post=post,
+        isle=isle,
+        path=path,
+        built=built,
+        rock=rock,
     )
 
 
@@ -161,9 +168,7 @@ def wave_rows(wv):
     return [[k[0], k[1], s, ph, float(n), 1.0, 1.0] for k, n, s, ph, att in wv.comps]
 
 
-def live_advected(
-    speed, nlo, nhi, count, spread, slope, seed, osc=None, atten=False, evolve=0.1
-):
+def live_advected(speed, nlo, nhi, count, spread, slope, seed, osc=None, atten=False, evolve=0.1):
     """Taylor turbulence without a loop: continuous frequencies, and eddies that also change
     shape as they drift (ω departs from k·U by up to ±evolve)."""
     rng = np.random.default_rng(seed)
@@ -192,9 +197,7 @@ def live_waves(nlo, nhi, count, direction, spread, steep, seed, depth=None):
         om = 2 * np.pi * n / hl.T
         kk = hl.k_deep(om) if depth is None else hl.k_finite(om, depth)
         d = hl.rot(direction, np.radians(rng.uniform(-spread, spread)))
-        rows.append(
-            [kk * d[0], kk * d[1], steep * d[1], rng.uniform(0, 2 * np.pi), n, 1.0, 1.0]
-        )
+        rows.append([kk * d[0], kk * d[1], steep * d[1], rng.uniform(0, 2 * np.pi), n, 1.0, 1.0])
     return rows
 
 
@@ -238,9 +241,7 @@ def components(sea, grass):
         rough=live_advected(hl.U_SEA, 1, 8, 10, 40, 0.6, 141, atten=True),
         swell=live_swell(),
         chop=live_waves(8, 20, 8, hl.WIND, 35, 0.08 * np.sqrt(5 / 8), 143),
-        chopL=live_waves(
-            10, 24, 8, hl.WIND, 35, 0.08 * np.sqrt(6 / 8), 144, depth=hl.LAGOON_DEPTH
-        ),
+        chopL=live_waves(10, 24, 8, hl.WIND, 35, 0.08 * np.sqrt(6 / 8), 144, depth=hl.LAGOON_DEPTH),
         gust=live_advected(hl.U_GRASS, 2, 13, 12, 30, 0.7, 151, osc=(1.3, 0.3)),
         flutter=live_advected(hl.U_GRASS, 28, 38, 6, 50, 0.0, 152, osc=(1.3, 0.3)),
     )
@@ -257,9 +258,7 @@ def blade_data(bl, gv0):
         gz=bl.root_gz,
         gv0=gv0[bl.roots[:, 1], bl.roots[:, 0]],
     )
-    blades = dict(
-        b=bl.bx[first], lean=bl.lean[first], n=bl.lb[first], tuft=bl.tid[first]
-    )
+    blades = dict(b=bl.bx[first], lean=bl.lean[first], n=bl.lb[first], tuft=bl.tid[first])
     ffirst = bl.fk == 0
     fg = dict(
         x=bl.fx[ffirst],
@@ -271,8 +270,7 @@ def blade_data(bl, gv0):
         gz=bl.fg_gz[ffirst],
     )
     out = {
-        f"tuft_{k}": arr(v, "int16" if k in ("rx", "ry") else "float64")
-        for k, v in tufts.items()
+        f"tuft_{k}": arr(v, "int16" if k in ("rx", "ry") else "float64") for k, v in tufts.items()
     }
     out.update(
         {
@@ -331,18 +329,12 @@ def bank_bumps():
         w = rng.uniform(6, 20)
         h = rng.uniform(1.5, 3.2) * (w / 10) ** 0.8
         bumps.append([x, w, h])
-        x += w * rng.uniform(0.45, 0.8) + (
-            rng.uniform(12, 50) if rng.random() < 0.28 else 0
-        )
+        x += w * rng.uniform(0.45, 0.8) + (rng.uniform(12, 50) if rng.random() < 0.28 else 0)
     top = np.zeros(W)
     for bx, bw, bh in bumps:
         xs = np.arange(W)
-        top = np.maximum(
-            top, bh * np.sqrt(np.clip(1 - ((xs - bx) / (bw / 2)) ** 2, 0, 1))
-        )
-    assert np.array_equal(top, hp.horizon_bank_profile()), (
-        "bank bumps do not rebuild the profile"
-    )
+        top = np.maximum(top, bh * np.sqrt(np.clip(1 - ((xs - bx) / (bw / 2)) ** 2, 0, 1)))
+    assert np.array_equal(top, hp.horizon_bank_profile()), "bank bumps do not rebuild the profile"
     return bumps
 
 
@@ -365,9 +357,7 @@ def bundle():
         | sea.lick * 64
         | L["pshadow"] * 128
     ).astype(np.uint8)
-    types = (region | (L["t1"] << 2) | (L["t2"] << 4) | (L["pmask"] << 6)).astype(
-        np.uint8
-    )
+    types = (region | (L["t1"] << 2) | (L["t2"] << 4) | (L["pmask"] << 6)).astype(np.uint8)
     kinds = (L["path"] * 1 | L["built"] * 2 | L["rock"] * 4).astype(np.uint8)
     masks = np.stack([types, flags, kinds], -1)
 

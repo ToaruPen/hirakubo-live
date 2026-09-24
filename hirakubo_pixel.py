@@ -45,9 +45,7 @@ PAL = {
         "#c9e3f7",
     ),
     # lighthouse, clouds and foam share one cool white ramp
-    "white": ramp(
-        "#5a6b86", "#7b8eab", "#9fb1ca", "#c0cfe0", "#dde6ef", "#f2f6fa", "#ffffff"
-    ),
+    "white": ramp("#5a6b86", "#7b8eab", "#9fb1ca", "#c0cfe0", "#dde6ef", "#f2f6fa", "#ffffff"),
     "deep": ramp(
         "#0a2257",
         "#0e2d6d",
@@ -85,16 +83,12 @@ PAL = {
     "bush": ramp("#0c1f14", "#13301b", "#1d4424", "#2a5a2d", "#3a7236", "#4f8a3f"),
     "isle": ramp("#1d3b31", "#294f38", "#386640", "#4c7e4a", "#669656"),
     "rock": ramp("#2a292c", "#434046", "#5f5a5b", "#7e7772", "#9c948a"),
-    "stone": ramp(
-        "#2f2b28", "#4b4640", "#6a6359", "#8a8174", "#aa9f8e", "#c8c1ae", "#e0dac8"
-    ),
+    "stone": ramp("#2f2b28", "#4b4640", "#6a6359", "#8a8174", "#aa9f8e", "#c8c1ae", "#e0dac8"),
     "wood": ramp("#241810", "#3d2a1b", "#5a3f29", "#78583a", "#977550", "#b39a72"),
     "door": ramp("#3a2215", "#5a331e", "#7b4a29", "#9c6436", "#b98048"),
 }
 
-BAY4 = (
-    np.array([[0, 8, 2, 10], [12, 4, 14, 6], [3, 11, 1, 9], [15, 7, 13, 5]]) + 0.5
-) / 16
+BAY4 = (np.array([[0, 8, 2, 10], [12, 4, 14, 6], [3, 11, 1, 9], [15, 7, 13, 5]]) + 0.5) / 16
 BAYER = np.tile(BAY4, (H // 4 + 1, W // 4 + 1))[:H, :W]
 
 
@@ -252,11 +246,7 @@ S_NEAR, S_FAR = 1 / (362 - HY), 1 / (233 - HY)
 def path_rows():
     t = np.linspace(0, 1, 4000)
     p0, p1, p2 = PATH_P
-    pts = (
-        ((1 - t) ** 2)[:, None] * p0
-        + (2 * (1 - t) * t)[:, None] * p1
-        + (t**2)[:, None] * p2
-    )
+    pts = ((1 - t) ** 2)[:, None] * p0 + (2 * (1 - t) * t)[:, None] * p1 + (t**2)[:, None] * p2
     w = PATH_W[0] + (PATH_W[1] - PATH_W[0]) * t**0.75
     cx, hw = np.full(H, np.nan), np.full(H, np.nan)
     for y in range(H):
@@ -291,9 +281,7 @@ def puff_height(puffs, seed, jitter=0.2, squash=1.0):
         if x0 >= x1 or y0 >= y1:
             continue
         sx, sy = XX[y0:y1, x0:x1] + 0.5, YY[y0:y1, x0:x1] + 0.5
-        d2 = (
-            ((sx - cx) / r) ** 2 + ((sy - cy) / ry) ** 2 + jitter * nz[y0:y1, x0:x1] * 2
-        )
+        d2 = ((sx - cx) / r) ** 2 + ((sy - cy) / ry) ** 2 + jitter * nz[y0:y1, x0:x1] * 2
         h = np.sqrt(np.clip(1 - d2, 0, None)) * r
         hgt[y0:y1, x0:x1] = np.maximum(hgt[y0:y1, x0:x1], h)
     return hgt
@@ -308,11 +296,7 @@ def lambert(hgt, light=(-0.55, -0.7, 0.55)):
 
 
 def despeckle(img, allow, passes=2):
-    key = (
-        (img[..., 0].astype(np.int64) << 16)
-        | (img[..., 1].astype(np.int64) << 8)
-        | img[..., 2]
-    )
+    key = (img[..., 0].astype(np.int64) << 16) | (img[..., 1].astype(np.int64) << 8) | img[..., 2]
     for _ in range(passes):
         up, dn = np.roll(key, 1, 0), np.roll(key, -1, 0)
         lf, rt = np.roll(key, 1, 1), np.roll(key, -1, 1)
@@ -420,12 +404,34 @@ def cumulus(x0, x1, base, height, seed, tiers=3, lean=0.0):
     return puffs
 
 
-BIG_CLOUD = [(356, 97, 7), (366, 95, 9), (378, 92, 11), (392, 89, 13), (414, 87, 15),
-             (440, 86, 16), (466, 87, 15), (490, 89, 13), (507, 92, 11), (520, 95, 8),
-             (530, 97, 6), (384, 76, 13), (407, 68, 17), (434, 62, 20), (461, 66, 17),
-             (486, 74, 13), (506, 82, 9), (424, 46, 14), (446, 42, 14), (466, 50, 11),
-             (410, 54, 10), (438, 30, 9), (452, 32, 7), (398, 80, 9), (476, 58, 9),
-             (455, 78, 12)]
+BIG_CLOUD = [
+    (356, 97, 7),
+    (366, 95, 9),
+    (378, 92, 11),
+    (392, 89, 13),
+    (414, 87, 15),
+    (440, 86, 16),
+    (466, 87, 15),
+    (490, 89, 13),
+    (507, 92, 11),
+    (520, 95, 8),
+    (530, 97, 6),
+    (384, 76, 13),
+    (407, 68, 17),
+    (434, 62, 20),
+    (461, 66, 17),
+    (486, 74, 13),
+    (506, 82, 9),
+    (424, 46, 14),
+    (446, 42, 14),
+    (466, 50, 11),
+    (410, 54, 10),
+    (438, 30, 9),
+    (452, 32, 7),
+    (398, 80, 9),
+    (476, 58, 9),
+    (455, 78, 12),
+]
 # (puffs, flat base row, seed) in drawing order
 CLOUDS = [
     (BIG_CLOUD, 100, 201),
@@ -451,7 +457,7 @@ def horizon_bank_profile():
 
 
 def paint_horizon_bank(img, top):
-    top = top * np.clip((np.abs(np.arange(W) - LX) - 30) / 10, 0, 1)   # keep clear of the lantern
+    top = top * np.clip((np.abs(np.arange(W) - LX) - 30) / 10, 0, 1)  # keep clear of the lantern
     top = np.floor(top + 0.35)
     dh = np.gradient(top)
     bottom = HY - 2
@@ -488,8 +494,7 @@ def lagoon_fields():
     c = fbm(SEA_X / 10.0, SEA_Z / 10.0, 61, 4)
     thr = 0.75 - 0.20 * zone - 0.08 * np.exp(-below / 10.0) + 0.08 * np.exp(-shore / 8.0)
     coral = LAGOON & (c > thr)
-    coral_v = (3.4 - (c - thr) * 22 + (depth - 0.5) * 2 - zone * 0.6
-               + 1.2 * np.exp(-below / 14.0))
+    coral_v = 3.4 - (c - thr) * 22 + (depth - 0.5) * 2 - zone * 0.6 + 1.2 * np.exp(-below / 14.0)
     sand = LAGOON & (fbm(SEA_X / 11.0, SEA_Z / 11.0, 63, 3) > 0.66 + 0.1 * zone) & ~coral
     return v, coral, coral_v, sand
 
@@ -542,12 +547,7 @@ def layer_island(img):
     v = 2.4 + 1.6 * (0.45 - xt) - 1.2 * rel + (leaf - 0.5) * 2.0 + 1.0 * (rel < 0.15)
     paint(img, veg, v, PAL["isle"])
     rock = ISLE & ~veg
-    rv = (
-        2.2
-        + 2.0 * (0.4 - xt)
-        + (vnoise(XX / 1.5, YY / 1.5, 82) - 0.5) * 1.6
-        - 1.2 * (rel > 0.82)
-    )
+    rv = 2.2 + 2.0 * (0.4 - xt) + (vnoise(XX / 1.5, YY / 1.5, 82) - 0.5) * 1.6 - 1.2 * (rel > 0.82)
     paint(img, rock, rv, PAL["rock"])
     despeckle(img, ISLE, 1)
     base = ISLAND["base"] + 1
@@ -612,9 +612,7 @@ def layer_path(img):
     rows = np.maximum((S_FAR - S_NEAR) / STEPS * (YY - HY) ** 2, 1e-3)  # rows per step
     sh = np.clip(1.3 / rows, 0, 0.45)
     nos = np.clip(1.0 / rows, 0, 0.3)
-    across = (XX - np.nan_to_num(PATH_CX)[:, None]) / np.maximum(
-        np.nan_to_num(PATH_HW)[:, None], 1
-    )
+    across = (XX - np.nan_to_num(PATH_CX)[:, None]) / np.maximum(np.nan_to_num(PATH_HW)[:, None], 1)
     wear = fbm(XX / 5.0, YY / 3.0, 111, 3)
     v = 4.4 - 0.5 * across + (wear - 0.5) * 1.4 - 0.6 * (1 - DEPTH)
     v = np.where(frac < sh, 2.2, v)
@@ -844,9 +842,7 @@ def glyph_mask(text, size, thr=0.3, ss=6):
     im = Image.new("L", (size * ss, size * ss * len(text)), 0)
     d = ImageDraw.Draw(im)
     for i, ch in enumerate(text):
-        d.text(
-            (size * ss / 2, (i + 0.5) * size * ss), ch, fill=255, font=font, anchor="mm"
-        )
+        d.text((size * ss / 2, (i + 0.5) * size * ss), ch, fill=255, font=font, anchor="mm")
     a = np.asarray(im, float).reshape(size * len(text), ss, size, ss).mean((1, 3)) / 255
     return a > thr
 
@@ -860,9 +856,7 @@ def layer_post(img):
         for w in range(0, 6):
             x, y = x1 + side + i, H - 1 - i // 2 - w
             if 0 <= x < W and 0 <= y < H and LAND[y, x]:
-                img[y, x] = PAL["grass"][
-                    max(ramp_index(PAL["grass"], img[y, x]) - 2, 0)
-                ]
+                img[y, x] = PAL["grass"][max(ramp_index(PAL["grass"], img[y, x]) - 2, 0)]
     notch = {x0 + 7: 1, x0 + 8: 2, x0 + 9: 1}
     for x in range(x0, x1 + side + 1):
         t = top + notch.get(x, 0) + (1 if x > x1 - 3 else 0) + (2 if x > x1 else 0)
@@ -921,9 +915,7 @@ def render():
     layer_land(img)
     layer_far_bushes(img)
     layer_path(img)
-    tuft_zone = (
-        LAND & ~PATH & (PATH_EDGE > 1.5) & ~((np.abs(XX - LX) < 45) & (YY < 240))
-    )
+    tuft_zone = LAND & ~PATH & (PATH_EDGE > 1.5) & ~((np.abs(XX - LX) < 45) & (YY < 240))
     draw_tufts(img, 2600, 7, tuft_zone)
     draw_tufts(img, 900, 8, LAND & (np.abs(PATH_EDGE) < 3.5) & (YY > 245))
     layer_lighthouse(img)
@@ -948,10 +940,7 @@ def export(img):
         (6, "hirakubo_3840x2160.png"),
     ):
         big = np.repeat(np.repeat(img, scale, 0), scale, 1)
-        assert (
-            big.shape[:2] == (H * scale, W * scale)
-            and big.shape[1] * 9 == big.shape[0] * 16
-        )
+        assert big.shape[:2] == (H * scale, W * scale) and big.shape[1] * 9 == big.shape[0] * 16
         assert palette_size(big) == n
         Image.fromarray(big).save(OUT / name, optimize=True)
         paths.append(OUT / name)
@@ -972,9 +961,7 @@ def crops(img, outdir):
     for name, (a, b, c, d) in boxes.items():
         sub = img[b:d, a:c]
         z = max(1, 900 // max(sub.shape[:2]))
-        Image.fromarray(np.repeat(np.repeat(sub, z, 0), z, 1)).save(
-            outdir / f"crop_{name}.png"
-        )
+        Image.fromarray(np.repeat(np.repeat(sub, z, 0), z, 1)).save(outdir / f"crop_{name}.png")
 
 
 if __name__ == "__main__":
