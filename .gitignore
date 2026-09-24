@@ -1,0 +1,18 @@
+# build products (python3 hirakubo_live_build.py / pnpm build)
+/hirakubo_live/
+/hirakubo_live.html
+/.lint/
+# loop videos and frames written by hirakubo_loop.py (tens of MB each)
+*.mp4
+/frames/
+# environments and caches
+node_modules/
+.venv/
+__pycache__/
+.ruff_cache/
+.wrangler/
+test-results/
+playwright-report/
+# local agent and preview settings
+.claude/
+.DS_Store
