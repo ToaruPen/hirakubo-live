@@ -8,6 +8,7 @@ size keeps exactly the same palette.
 """
 
 import sys
+from itertools import pairwise
 from pathlib import Path
 
 import numpy as np
@@ -163,7 +164,7 @@ def blur(a, r):
 
 # ---------------------------------------------------------------- geometry
 def curve(points, wobble=0.0, seed=0, scale=9.0):
-    px, py = zip(*points)
+    px, py = zip(*points, strict=True)
     xs = np.arange(W)
     y = np.interp(xs, px, py)
     if wobble:
@@ -200,7 +201,7 @@ SURF_PTS = [
     (540, 177),
     (640, 181),
 ]
-ISLAND = dict(x0=382, x1=460, base=174, top=157)
+ISLAND = {"x0": 382, "x1": 460, "base": 174, "top": 157}
 
 land_y = curve(LAND_PTS, wobble=1.2, seed=11, scale=6)
 surf_y = curve(SURF_PTS, wobble=1.0, seed=12, scale=14)
@@ -266,7 +267,7 @@ PATH_EDGE = np.where(
 PATH = LAND & (PATH_EDGE < (vnoise(XX / 2.0, YY / 2.0, 101) - 0.5) * 2.2)
 
 # carved marker post 「石垣島最北端」 standing at the viewpoint (foreground, right)
-POST = dict(x0=556, x1=575, side=4, top=190)
+POST = {"x0": 556, "x1": 575, "side": 4, "top": 190}
 DEPTH = np.clip((YY - 218) / 142, 0, 1)  # 0 = far (the cape) … 1 = at the viewer's feet
 
 
@@ -313,7 +314,7 @@ def line(img, x0, y0, x1, y1, color):
     n = int(max(abs(x1 - x0), abs(y1 - y0))) + 1
     for i in range(n):
         t = i / max(n - 1, 1)
-        put(img, int(round(x0 + (x1 - x0) * t)), int(round(y0 + (y1 - y0) * t)), color)
+        put(img, round(x0 + (x1 - x0) * t), round(y0 + (y1 - y0) * t), color)
 
 
 def clump(cx, cy, w, h, n, rmin, rmax, seed):
@@ -635,7 +636,7 @@ def draw_tufts(img, n, seed, region):
             lean = rng.uniform(0.25, 0.75)
             lb = max(1, int(length * rng.uniform(0.55, 1.0)))
             for kk in range(lb):
-                px = int(round(bx + lean * kk * kk / lb))
+                px = round(bx + lean * kk * kk / lb)
                 idx = base + 1 if kk < lb - 1 else base + 2
                 put(img, px, y - kk, PAL["grass"][min(idx, 8)])
         put(img, x, y + 1, PAL["grass"][max(base - 2, 0)])
@@ -658,8 +659,8 @@ def layer_lighthouse(img):
     img[sh] = st[3]
     # ---- low curved wall around the front-right of the platform
     for th in np.linspace(-0.15 * np.pi, 0.55 * np.pi, 220):
-        x = int(round(pcx + prx * np.cos(th)))
-        yb = int(round(pcy + pry * np.sin(th)))
+        x = round(pcx + prx * np.cos(th))
+        yb = round(pcy + pry * np.sin(th))
         face = 4 if np.cos(th) < 0.55 else 3
         for dy in range(1, 3):
             put(img, x, yb - dy, wr[face])
@@ -785,15 +786,15 @@ def layer_fence(img):
     wd = PAL["wood"]
     posts = []
     for k in np.arange(0.6, STEPS - 1.5, 1.6):
-        y = int(round(HY + 1 / (S_NEAR + k / STEPS * (S_FAR - S_NEAR))))
+        y = round(HY + 1 / (S_NEAR + k / STEPS * (S_FAR - S_NEAR)))
         if np.isnan(PATH_CX[y]):
             continue
-        hgt = max(3, int(round(0.088 * (y - HY) + 0.5)))
-        wid = max(2, int(round(hgt * 0.3)))
-        x = int(round(PATH_CX[y] + PATH_HW[y] + 1 + 0.04 * (y - HY)))
+        hgt = max(3, round(0.088 * (y - HY) + 0.5))
+        wid = max(2, round(hgt * 0.3))
+        x = round(PATH_CX[y] + PATH_HW[y] + 1 + 0.04 * (y - HY))
         posts.append((x, y, hgt, wid))
     posts.sort(key=lambda p: p[1])
-    for (xa, ya, ha, wa), (xb, yb, hb, wb) in zip(posts, posts[1:]):
+    for (xa, ya, ha, wa), (xb, yb, hb, wb) in pairwise(posts):
         for a in (0.28, 0.68):
             y0, y1 = ya - ha * (1 - a), yb - hb * (1 - a)
             line(img, xa + wa // 2, y0, xb + wb // 2, y1, wd[3])
@@ -853,7 +854,7 @@ def layer_post(img):
     rng = np.random.default_rng(17)
     # cast shadow first: thrown up and to the right across the grass
     for i in range(1, 44):
-        for w in range(0, 6):
+        for w in range(6):
             x, y = x1 + side + i, H - 1 - i // 2 - w
             if 0 <= x < W and 0 <= y < H and LAND[y, x]:
                 img[y, x] = PAL["grass"][max(ramp_index(PAL["grass"], img[y, x]) - 2, 0)]
@@ -882,9 +883,9 @@ def layer_post(img):
     g = glyph_mask("石垣島最北端", 16)
     gy, gx = np.nonzero(g)
     ox, oy = x0 + 2, top + 9
-    for y, x in zip(gy, gx):
+    for y, x in zip(gy, gx, strict=True):
         put(img, ox + x + 1, oy + y + 1, st[5])  # lit lower lip of the carving
-    for y, x in zip(gy, gx):
+    for y, x in zip(gy, gx, strict=True):
         put(img, ox + x, oy + y, st[0])
 
 
@@ -900,7 +901,7 @@ def layer_foreground(img):
         lean = rng.uniform(0.3, 0.9)
         c = int(rng.integers(1, 4))
         for k in range(ln):
-            px = int(round(x + lean * k * k / ln))
+            px = round(x + lean * k * k / ln)
             put(img, px, y - k, gr[c + (2 if k > ln - 3 else 0)])
             put(img, px + 1, y - k, gr[max(c - 1, 0)])
 

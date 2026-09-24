@@ -24,4 +24,7 @@ ignore = [
   "RUF001",
   "RUF002",
   "RUF003",
+  # the pixel grids are upper case (XX, YY, SKY, LAND), which SIM300 takes for constants: it would
+  # turn every mask such as `YY >= land_y` around
+  "SIM300",
 ]

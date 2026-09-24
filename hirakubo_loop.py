@@ -71,7 +71,7 @@ from hirakubo_pixel import (
 
 FPS = 60
 T = 24.0  # loop length (s): three periods of the 8 s swell
-N = int(round(FPS * T))  # 1440 frames; frame N is frame 0
+N = round(FPS * T)  # 1440 frames; frame N is frame 0
 G = 9.81
 OUT = Path(__file__).resolve().parent
 
@@ -296,9 +296,9 @@ class Whitecaps:
         for j in np.argsort(inten):
             if inten[j] < 0.06:
                 continue
-            row = int(round(y[j]))
+            row = round(y[j])
             half = max(wpx[j], 1.0) / 2
-            xs = np.arange(int(round(x[j] - half)), int(round(x[j] + half)) + 1)
+            xs = np.arange(round(x[j] - half), round(x[j] + half) + 1)
             xs = xs[(xs >= 0) & (xs < W)]
             if row >= H or not len(xs):
                 continue
@@ -817,9 +817,9 @@ def encode(frames, out, scale):
 
 def check(frames):
     frames = Path(frames)
-    load = lambda i: np.asarray(Image.open(frames / f"f{i % N:04d}.png").convert("RGB")).astype(
-        np.int16
-    )
+
+    def load(i):
+        return np.asarray(Image.open(frames / f"f{i % N:04d}.png").convert("RGB")).astype(np.int16)
 
     def changed(a, b):
         return np.any(a != b, -1)

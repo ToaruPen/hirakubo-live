@@ -120,22 +120,22 @@ def static_split(st):
     fence[fm] = np.any(fcol != PAL["grass"][1], -1)
     built = st["lighthouse"][0] | fence
     blobs = np.zeros((H, W), bool)
-    for sh, m, col in st["blobs"]:
+    for _sh, m, _col in st["blobs"]:
         blobs |= m
     rock = blobs & (t2 == 2) & np.all(c2[..., None, :] == np.array(PAL["stone"]), -1).any(-1)
-    return dict(
-        t1=t1,
-        c1=c1,
-        t2=t2,
-        c2=c2,
-        pshadow=pshadow,
-        pmask=pm,
-        post=post,
-        isle=isle,
-        path=path,
-        built=built,
-        rock=rock,
-    )
+    return {
+        "t1": t1,
+        "c1": c1,
+        "t2": t2,
+        "c2": c2,
+        "pshadow": pshadow,
+        "pmask": pm,
+        "post": post,
+        "isle": isle,
+        "path": path,
+        "built": built,
+        "rock": rock,
+    }
 
 
 def compose_split(i, dyn, st, L):
@@ -208,7 +208,7 @@ def live_swell(seed=142, count=5, spread=0.06, width=0.035, steep=0.035):
     wgt = np.exp(-0.5 * (delta / width) ** 2)
     wgt /= np.sqrt((wgt**2).sum())
     rows = []
-    for dl, wj in zip(delta, wgt):
+    for dl, wj in zip(delta, wgt, strict=True):
         n = hl.SWELL_N * (1 - dl)  # period 8 s·(1 + δ)
         om = 2 * np.pi * n / hl.T
         kk = hl.k_deep(om)
@@ -229,46 +229,48 @@ def live_swell(seed=142, count=5, spread=0.06, width=0.035, steep=0.035):
 
 
 def components(sea, grass):
-    loop = dict(
-        rough=adv_rows(sea.rough),
-        swell=wave_rows(sea.swell),
-        chop=wave_rows(sea.chop),
-        chopL=wave_rows(sea.chop_lagoon),
-        gust=adv_rows(grass.gust),
-        flutter=adv_rows(grass.flutter),
-    )
-    live = dict(
-        rough=live_advected(hl.U_SEA, 1, 8, 10, 40, 0.6, 141, atten=True),
-        swell=live_swell(),
-        chop=live_waves(8, 20, 8, hl.WIND, 35, 0.08 * np.sqrt(5 / 8), 143),
-        chopL=live_waves(10, 24, 8, hl.WIND, 35, 0.08 * np.sqrt(6 / 8), 144, depth=hl.LAGOON_DEPTH),
-        gust=live_advected(hl.U_GRASS, 2, 13, 12, 30, 0.7, 151, osc=(1.3, 0.3)),
-        flutter=live_advected(hl.U_GRASS, 28, 38, 6, 50, 0.0, 152, osc=(1.3, 0.3)),
-    )
+    loop = {
+        "rough": adv_rows(sea.rough),
+        "swell": wave_rows(sea.swell),
+        "chop": wave_rows(sea.chop),
+        "chopL": wave_rows(sea.chop_lagoon),
+        "gust": adv_rows(grass.gust),
+        "flutter": adv_rows(grass.flutter),
+    }
+    live = {
+        "rough": live_advected(hl.U_SEA, 1, 8, 10, 40, 0.6, 141, atten=True),
+        "swell": live_swell(),
+        "chop": live_waves(8, 20, 8, hl.WIND, 35, 0.08 * np.sqrt(5 / 8), 143),
+        "chopL": live_waves(
+            10, 24, 8, hl.WIND, 35, 0.08 * np.sqrt(6 / 8), 144, depth=hl.LAGOON_DEPTH
+        ),
+        "gust": live_advected(hl.U_GRASS, 2, 13, 12, 30, 0.7, 151, osc=(1.3, 0.3)),
+        "flutter": live_advected(hl.U_GRASS, 28, 38, 6, 50, 0.0, 152, osc=(1.3, 0.3)),
+    }
     return loop, live
 
 
 # ---------------------------------------------------------------- CPU-side data
 def blade_data(bl, gv0):
     first = bl.kk == 0
-    tufts = dict(
-        rx=bl.roots[:, 0],
-        ry=bl.roots[:, 1],
-        gx=bl.root_gx,
-        gz=bl.root_gz,
-        gv0=gv0[bl.roots[:, 1], bl.roots[:, 0]],
-    )
-    blades = dict(b=bl.bx[first], lean=bl.lean[first], n=bl.lb[first], tuft=bl.tid[first])
+    tufts = {
+        "rx": bl.roots[:, 0],
+        "ry": bl.roots[:, 1],
+        "gx": bl.root_gx,
+        "gz": bl.root_gz,
+        "gv0": gv0[bl.roots[:, 1], bl.roots[:, 0]],
+    }
+    blades = {"b": bl.bx[first], "lean": bl.lean[first], "n": bl.lb[first], "tuft": bl.tid[first]}
     ffirst = bl.fk == 0
-    fg = dict(
-        x=bl.fx[ffirst],
-        y=bl.fy[ffirst],
-        le=bl.fl[ffirst],
-        n=bl.fn[ffirst],
-        c=bl.fc[ffirst],
-        gx=bl.fg_gx[ffirst],
-        gz=bl.fg_gz[ffirst],
-    )
+    fg = {
+        "x": bl.fx[ffirst],
+        "y": bl.fy[ffirst],
+        "le": bl.fl[ffirst],
+        "n": bl.fn[ffirst],
+        "c": bl.fc[ffirst],
+        "gx": bl.fg_gx[ffirst],
+        "gz": bl.fg_gz[ffirst],
+    }
     out = {
         f"tuft_{k}": arr(v, "int16" if k in ("rx", "ry") else "float64") for k, v in tufts.items()
     }
@@ -301,13 +303,13 @@ def cloud_data():
         nz = fbm(gx / 5.0, gy / 5.0, seed, 3) - 0.5
         edge = vnoise(np.arange(x0, x1) / 7.0, np.zeros(x1 - x0), seed + 3)
         clouds.append(
-            dict(
-                puffs=p.tolist(),
-                base=base,
-                grid=[x0, y0, x1 - x0, y1 - y0],
-                nz=arr(nz, "float32"),
-                edge=arr(edge, "float64"),
-            )
+            {
+                "puffs": p.tolist(),
+                "base": base,
+                "grid": [x0, y0, x1 - x0, y1 - y0],
+                "nz": arr(nz, "float32"),
+                "edge": arr(edge, "float64"),
+            }
         )
     return clouds
 
@@ -388,40 +390,40 @@ def bundle():
     loop, live = components(sea, grass)
     caps = sea.caps
     data = {
-        "const": dict(
-            W=W,
-            H=H,
-            HY=HY,
-            F=F,
-            CAM_H=hl.CAM_H,
-            EYE=hl.EYE_OVER_CAPE,
-            LX=hp.LX,
-            FPS=hl.FPS,
-            T=hl.T,
-            N=hl.N,
-            G=hl.G,
-            WIND=hl.WIND.tolist(),
-            U_GRASS=hl.U_GRASS,
-            U_SEA=hl.U_SEA,
-            U_CLOUD=hl.U_CLOUD,
-            U_CIRRUS=hl.U_CIRRUS,
-            CLOUD_BASE=hl.CLOUD_BASE,
-            CIRRUS_H=hl.CIRRUS_H,
-            BANK_DIST=hl.BANK_DIST,
-            SHEEN=hl.SHEEN,
-            REFLECT=hl.REFLECT,
-            SWELL_REFLECT=hl.SWELL_REFLECT,
-            BORE=hl.BORE_SPEED,
-            SET_AMP=hl.SET_AMP.tolist(),
-            SWELL_N=hl.SWELL_N,
-            ISLAND=ISLAND,
-            POST=POST,
-            FIX=FIX,
-            FIX_OFF=FIX_OFF,
-            trail_y=[surf.y0, surf.y1],
-            isle_x0=int(ix[0]),
-            isle_zi=zi,
-        ),
+        "const": {
+            "W": W,
+            "H": H,
+            "HY": HY,
+            "F": F,
+            "CAM_H": hl.CAM_H,
+            "EYE": hl.EYE_OVER_CAPE,
+            "LX": hp.LX,
+            "FPS": hl.FPS,
+            "T": hl.T,
+            "N": hl.N,
+            "G": hl.G,
+            "WIND": hl.WIND.tolist(),
+            "U_GRASS": hl.U_GRASS,
+            "U_SEA": hl.U_SEA,
+            "U_CLOUD": hl.U_CLOUD,
+            "U_CIRRUS": hl.U_CIRRUS,
+            "CLOUD_BASE": hl.CLOUD_BASE,
+            "CIRRUS_H": hl.CIRRUS_H,
+            "BANK_DIST": hl.BANK_DIST,
+            "SHEEN": hl.SHEEN,
+            "REFLECT": hl.REFLECT,
+            "SWELL_REFLECT": hl.SWELL_REFLECT,
+            "BORE": hl.BORE_SPEED,
+            "SET_AMP": hl.SET_AMP.tolist(),
+            "SWELL_N": hl.SWELL_N,
+            "ISLAND": ISLAND,
+            "POST": POST,
+            "FIX": FIX,
+            "FIX_OFF": FIX_OFF,
+            "trail_y": [surf.y0, surf.y1],
+            "isle_x0": int(ix[0]),
+            "isle_zi": zi,
+        },
         "pal": {k: v.tolist() for k, v in PAL.items()},
         "img": {
             "masks": png(masks),
