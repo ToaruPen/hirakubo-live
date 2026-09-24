@@ -1,4 +1,6 @@
 // Offline audio metrics for HK.soundTest buffers, and boot() that loads harness.js (see README).
+const db = (x) => +(20 * Math.log10(x + 1e-12)).toFixed(1);
+
 window.M = {
   stats(buf, a = 0, b = buf.duration) {
     const sr = buf.sampleRate,
@@ -20,8 +22,6 @@ window.M = {
         n++;
       }
     }
-
-    const db = (x) => +(20 * Math.log10(x + 1e-12)).toFixed(1);
 
     return { peakDb: db(pk), rmsDb: db(Math.sqrt(s / n)) };
   },
@@ -122,14 +122,13 @@ window.boot = async () => {
     w();
   });
 
-  for (const f of ["/tools/harness/harness.js"])
-    await new Promise((res, rej) => {
-      const s = document.createElement("script");
-      s.src = f + "?v=" + Date.now();
-      s.onload = res;
-      s.onerror = rej;
-      document.head.appendChild(s);
-    });
+  await new Promise((res, rej) => {
+    const s = document.createElement("script");
+    s.src = "/tools/harness/harness.js?v=" + Date.now();
+    s.addEventListener("load", res, { once: true });
+    s.addEventListener("error", rej, { once: true });
+    document.head.appendChild(s);
+  });
   window.hh = (px) => {
     let h = 2166136261;
 

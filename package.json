@@ -4,8 +4,9 @@
   "type": "module",
   "scripts": {
     "build": "uv run python hirakubo_live_build.py",
+    "fmt": "oxfmt",
     "lint": "pnpm lint:js && pnpm lint:py",
-    "lint:js": "oxlint --deny-warnings",
+    "lint:js": "oxlint --deny-warnings --report-unused-disable-directives && oxfmt --check",
     "lint:py": "uv run ruff check && uv run ruff format --check",
     "test": "node --test tests/*.test.mjs",
     "e2e": "playwright test",

@@ -123,7 +123,7 @@ window.wallpaperPropertyListener = {
 
   try {
     D = JSON.parse(document.getElementById("hk-data").textContent);
-  } catch (e) {
+  } catch {
     fail("壁紙のデータを読み込めませんでした。ファイルが壊れていないか確認してください。");
 
     return;
@@ -185,7 +185,8 @@ window.wallpaperPropertyListener = {
 
   const REEF_X = colRow(7),
     REEF_Z = colRow(8),
-    ISLE_X = colRow(9);
+    ISLE_X = colRow(9),
+    ISLE_Z = new Float64Array(W).fill(C.isle_zi); // the island's surf lies at one distance
 
   const PAL_ORDER = ["sky", "white", "deep", "lagoon", "coral", "grass", "straw", "rock"];
   const palFlat = new Float32Array(57 * 3);
@@ -974,7 +975,7 @@ void main() {
 
     for (let c = lo; c < hi; c++) {
       const x = X[c],
-        z = typeof Z === "number" ? Z : Z[c];
+        z = Z[c];
 
       let br = 0,
         bi = 0;
@@ -1035,6 +1036,7 @@ void main() {
       wp[j] = wpx;
     }
 
+    // oxlint-disable-next-line unicorn/no-array-sort -- sorts the index array made on this line; toSorted() needs Chrome 110
     const order = Array.from({ length: count }, (_, j) => j).sort((a, b) => inten[a] - inten[b]);
 
     for (const j of order) {
@@ -1110,22 +1112,22 @@ void main() {
     ISLE_NOISE = A.isle_noise,
     ISLE_X0 = C.isle_x0;
 
+  function putIsle(x, y, code) {
+    if (x >= 0 && x < W && y >= 0 && y < H) over[(y * W + x) * 4 + 3] = code;
+  }
+
   function drawIsland() {
     const base = ISL.base + 1;
-
-    const put = (x, y, code) => {
-      if (x >= 0 && x < W && y >= 0 && y < H) over[(y * W + x) * 4 + 3] = code;
-    };
 
     for (let x = ISLE_X0; x < ISL.x1 + 5; x++) {
       const n = ISLE_NOISE[x - ISLE_X0];
       const ii = ampI[x] * (0.3 + 0.7 * Math.exp(-tauI[x] / 2.0));
 
-      if (n > 1 - 0.9 * ii) put(x, base, n > 1 - 0.5 * ii ? 1 : 2);
+      if (n > 1 - 0.9 * ii) putIsle(x, base, n > 1 - 0.5 * ii ? 1 : 2);
 
       if (x < ISL.x0 + 6 && tauI[x] < 1.0 && n > 0.4) {
         for (let dy = 1; dy <= Math.trunc(3.5 * (1 - tauI[x]) * ampI[x]); dy++)
-          put(x - 2, base - dy, 2);
+          putIsle(x - 2, base - dy, 2);
       }
     }
   }
@@ -1374,10 +1376,10 @@ void main() {
 
             if (nz !== nz) nz = nzCache[gi] = noiseAt(x, y);
 
-            const ax_ = (x + 0.5 - cx) / r,
-              ay_ = (y + 0.5 - cy) / (r * ky);
+            const ex = (x + 0.5 - cx) / r,
+              ey = (y + 0.5 - cy) / (r * ky);
 
-            const d2 = ax_ * ax_ + ay_ * ay_ + 0.3 * nz * 2 * rag;
+            const d2 = ex * ex + ey * ey + 0.3 * nz * 2 * rag;
             const h = Math.sqrt(Math.max(1 - d2, 0)) * (r * ky);
 
             if (h > hgt[gi]) hgt[gi] = h;
@@ -1503,7 +1505,7 @@ void main() {
     let src = a,
       tmp = new Float64Array(w * h);
 
-    for (let pass = 0; pass < 2; pass++) {
+    for (let rep = 0; rep < 2; rep++) {
       for (let y = 0; y < h; y++)
         for (let x = 0; x < w; x++) {
           let s = 0;
@@ -1977,6 +1979,7 @@ void main() {
       }
     },
     composite(t) {
+      // oxlint-disable-next-line unicorn/no-array-sort -- sorts the copy made on this line; toSorted() needs Chrome 110
       const order = this.clouds.slice().sort((a, b) => b.pose(t).Z - a.pose(t).Z);
       // in env mode overlay B carries, over a cloud, how far it has faded into the air (4..255), and
       // elsewhere the density of a rain shaft
@@ -2307,9 +2310,9 @@ void main() {
     mo.uz = wv[1] * k;
     mo.cloudX += mo.ux * dts;
     mo.cloudZ += mo.uz * dts;
-    const P = 512 * 2600;
-    mo.deckX = (mo.deckX + 1.3 * mo.ux * dts) % P;
-    mo.deckZ = (mo.deckZ + 1.3 * mo.uz * dts) % P;
+    const deckWrap = 512 * 2600;
+    mo.deckX = (mo.deckX + 1.3 * mo.ux * dts) % deckWrap;
+    mo.deckZ = (mo.deckZ + 1.3 * mo.uz * dts) % deckWrap;
     mo.scX = (mo.scX + mo.ux * dts) % 512e3;
     mo.scZ = (mo.scZ + mo.uz * dts) % 512e3; // stratocumulus: 512 cells of 1 km
     mo.scT += dts / 400;
@@ -2345,11 +2348,11 @@ void main() {
     if (Number.isFinite(mo.seaTurn)) mo.seaTurn = ease(mo.seaTurn, 300, 0.01);
   }
 
-  function eqVec(ra, dec) {
+  function eqVec(ra, de) {
     ra *= D2R;
-    dec *= D2R;
+    de *= D2R;
 
-    return [Math.cos(dec) * Math.cos(ra), Math.cos(dec) * Math.sin(ra), Math.sin(dec)];
+    return [Math.cos(de) * Math.cos(ra), Math.cos(de) * Math.sin(ra), Math.sin(de)];
   }
 
   const GAL_X = eqVec(266.405, -28.936),
@@ -2385,11 +2388,11 @@ void main() {
           rows[r][0] * cols[c][0] + rows[r][1] * cols[c][1] + rows[r][2] * cols[c][2];
   }
 
-  const linC = (v) => {
+  function linC(v) {
     v /= 255;
 
     return v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
-  };
+  }
 
   // ------------------------------------------------------------------ wet ground
   // Water on the grass and the stone (w: share of the ~0.5 mm their surfaces hold) and standing in
@@ -2646,7 +2649,7 @@ void main() {
 
     // extinction 0.16 mag per air mass in clean air (a dark site), more in haze
     const f = localFrame(env.b.lst),
-      { E, N, U } = f,
+      { E: east, N: north, U: up } = f,
       kext = 0.16 + 0.3 * env.wx.haze,
       S = STARS;
 
@@ -2655,13 +2658,13 @@ void main() {
         y = S.v[3 * i + 1],
         z = S.v[3 * i + 2];
 
-      const nn = N[0] * x + N[1] * y + N[2] * z;
+      const nn = north[0] * x + north[1] * y + north[2] * z;
 
       if (nn < 0.8) continue;
-      const uu = U[0] * x + U[1] * y + U[2] * z;
+      const uu = up[0] * x + up[1] * y + up[2] * z;
 
       if (uu <= 0) continue;
-      const ee = E[0] * x + E[1] * y + E[2] * z;
+      const ee = east[0] * x + east[1] * y + east[2] * z;
 
       const px = Math.floor(W / 2 + (F * ee) / nn),
         py = Math.round(HY + 0.5 - (F * uu) / nn);
@@ -2743,7 +2746,7 @@ void main() {
       drawCaps(loopCaps.ev, loopCaps.n, (j) => ((((i - A.caps_birth[j]) % N) + N) % N) / FPS);
     } else {
       om = groupTiming(REEF_X, REEF_Z, t, tauR, ampR, mR, 0, W);
-      groupTiming(ISLE_X, C.isle_zi, t, tauI, ampI, null, ISLE_X0, ISL.x1 + 5);
+      groupTiming(ISLE_X, ISLE_Z, t, tauI, ampI, null, ISLE_X0, ISL.x1 + 5);
 
       if (w)
         for (let c = 0; c < W; c++) {
@@ -2986,22 +2989,22 @@ void main() {
 
   // a finger (not a mouse: the wallpaper host) drags the scene over what the screen crops, and a
   // flick carries on and slows; a tap stays a tap
+  // keeps only an axis the screen crops
+  function panTo(x, y) {
+    const px = pan.x,
+      py = pan.y;
+
+    pan.x = x;
+    pan.y = y;
+    layout();
+    pan.x = view.panX ? view.cx : px;
+    pan.y = view.panY ? view.cy : py;
+    present();
+  }
+
   function setupPan() {
     let drag = null,
       fling = 0;
-
-    const moveTo = (x, y) => {
-      // keeps only an axis the screen crops
-      const px = pan.x,
-        py = pan.y;
-
-      pan.x = x;
-      pan.y = y;
-      layout();
-      pan.x = view.panX ? view.cx : px;
-      pan.y = view.panY ? view.cy : py;
-      present();
-    };
 
     canvas.addEventListener("pointerdown", (e) => {
       if (e.pointerType === "mouse" || drag) return;
@@ -3030,7 +3033,7 @@ void main() {
 
         try {
           canvas.setPointerCapture(e.pointerId);
-        } catch (err) {
+        } catch {
           /* already released */
         }
       }
@@ -3039,7 +3042,7 @@ void main() {
         x0 = view.cx,
         y0 = view.cy;
 
-      moveTo(drag.cx - dx * k, drag.cy - dy * k);
+      panTo(drag.cx - dx * k, drag.cy - dy * k);
 
       const dt = Math.max(e.timeStamp - drag.t, 1) / 1000,
         a = Math.min(dt / 0.05, 1); // velocity, ~50 ms memory
@@ -3067,7 +3070,7 @@ void main() {
           y0 = view.cy;
 
         t0 = now;
-        moveTo(x0 + vx * dt, y0 + vy * dt);
+        panTo(x0 + vx * dt, y0 + vy * dt);
 
         if (view.cx === x0) vx = 0; // stopped by an edge
 
@@ -3107,16 +3110,23 @@ void main() {
   }
 
   // ------------------------------------------------------------------ start
+  // waits for load, not decode(): decode() never settles while the page is hidden
+  function loadImage(k) {
+    const im = new Image();
+
+    return new Promise((res, rej) => {
+      im.addEventListener("load", () => res(im), { once: true });
+      im.addEventListener("error", () => rej(new Error("image " + k)), { once: true });
+      im.src = D.img[k].uri;
+    });
+  }
+
   async function loadImages() {
-    for (const k in D.img) {
-      // wait for load, not decode(): decode() never settles while the page is hidden
-      const im = new Image();
-      await new Promise((res, rej) => {
-        im.onload = res;
-        im.onerror = () => rej(new Error("image " + k));
-        im.src = D.img[k].uri;
-      });
-      TX[k] = imageTexture(im);
+    const keys = Object.keys(D.img);
+    const images = await Promise.all(keys.map(loadImage));
+
+    for (const [j, k] of keys.entries()) {
+      TX[k] = imageTexture(images[j]);
       const fb = gl.createFramebuffer();
       gl.bindFramebuffer(gl.FRAMEBUFFER, fb);
       gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, TX[k], 0);
@@ -3246,7 +3256,10 @@ void main() {
   // ------------------------------------------------------------------ controls (browser only)
   // Wallpaper Engine provides wallpaperRegisterAudioListener to its pages; there the wallpaper just
   // follows the system clock and the simulated weather, and this panel stays hidden.
-  const $ = (id) => document.getElementById(id);
+  function $(id) {
+    return document.getElementById(id);
+  }
+
   const JST = 9 * 3600e3;
 
   const REGIME_JA = {
@@ -3330,7 +3343,7 @@ void main() {
           vol: snd.vol,
         }),
       );
-    } catch (e) {
+    } catch {
       /* storage unavailable */
     }
   }
@@ -3351,10 +3364,10 @@ void main() {
 
       if (o.light === "beam" || o.light === "iso") env.light = o.light;
 
-      if (typeof o.sound === "boolean") snd.want = o.sound;
+      if (o.sound === true || o.sound === false) snd.want = o.sound;
 
       if (Number.isInteger(o.vol) && o.vol >= 0 && o.vol <= 100) snd.vol = o.vol;
-    } catch (e) {
+    } catch {
       /* storage unavailable */
     }
   }
@@ -3426,8 +3439,7 @@ void main() {
   }
 
   function setupUI() {
-    if (HK_SETTINGS.wallpaper || typeof window.wallpaperRegisterAudioListener === "function")
-      return;
+    if (HK_SETTINGS.wallpaper || "wallpaperRegisterAudioListener" in window) return;
     uiOn = true;
     $("sky-ui").hidden = false;
 
@@ -3851,7 +3863,7 @@ void main() {
       rnd = K.rnd,
       near = r < 2500;
 
-    const D = 3 + (1.6 * r) / 1000 + strokes,
+    const dur = 3 + (1.6 * r) / 1000 + strokes,
       peak = 1.1 * clamp(1500 / r, 0.12, 1);
 
     const s = ctx.createBufferSource(),
@@ -3872,12 +3884,12 @@ void main() {
 
       g.gain.setTargetAtTime(p, tt, a);
       g.gain.setTargetAtTime(0.2 * p, tt + 3 * a, 0.3 + 0.5 * rnd());
-      tt += 3 * a + (D / bumps) * (0.3 + 0.9 * rnd());
+      tt += 3 * a + (dur / bumps) * (0.3 + 0.9 * rnd());
     }
 
-    g.gain.setTargetAtTime(0, tt, D / 6);
+    g.gain.setTargetAtTime(0, tt, dur / 6);
     s.start(at, rnd() * 6);
-    s.stop(tt + D);
+    s.stop(tt + dur);
 
     if (near) {
       // the crack of the first stroke
@@ -3923,7 +3935,10 @@ void main() {
     note(K, { kind: "owl", at, who });
   }
 
-  const rainOf = (wx) => (wx.rain > 0.02 ? wx.rainRate : 0); // mm/h, as the wet ground takes it
+  // mm/h, as the wet ground takes it
+  function rainOf(wx) {
+    return wx.rain > 0.02 ? wx.rainRate : 0;
+  }
 
   function owlAct() {
     // after dusk, out of the rain and a strong wind
@@ -3961,7 +3976,7 @@ void main() {
   function soundStep(K, when, t, dt) {
     const ctx = K.ctx,
       wx = env.wx,
-      U = wx.windSpeed,
+      wind = wx.windSpeed,
       R = rainOf(wx);
 
     const cont = t - K.t > 0 && t - K.t < 1; // not the first step, nor a jump in time
@@ -4012,12 +4027,12 @@ void main() {
       );
 
       gm += gn / 3;
-      set(K.rustle[k].gain, 0.2 * Math.min(((U * (1 + 0.5 * gn)) / 10) ** 2, 2), 0.15);
+      set(K.rustle[k].gain, 0.2 * Math.min(((wind * (1 + 0.5 * gn)) / 10) ** 2, 2), 0.15);
     });
-    set(K.rumble.gain, 0.12 * Math.min(((U * (1 + 0.3 * gm)) / 12) ** 2, 3), 0.3);
+    set(K.rumble.gain, 0.12 * Math.min(((wind * (1 + 0.3 * gm)) / 12) ** 2, 3), 0.3);
     // the tone of a 4 mm wire, f = 0.2 U / d (chosen), only in a gale
-    set(K.whistleF.frequency, 50 * U * (1 + 0.2 * gm), 0.3);
-    set(K.whistle.gain, 3 * smooth01((U - 9) / 5) * (0.6 + 0.4 * gm), 0.3);
+    set(K.whistleF.frequency, 50 * wind * (1 + 0.2 * gm), 0.3);
+    set(K.whistle.gain, 3 * smooth01((wind - 9) / 5) * (0.6 + 0.4 * gm), 0.3);
     const rr = Math.sqrt(R / 25);
     set(K.hiss.gain, 0.25 * rr, 1);
     set(K.patter.gain, 0.12 * rr, 1);
@@ -4055,27 +4070,27 @@ void main() {
 
   // on while it is wanted, the scene runs and the page is in view; the context is made at the first
   // click, and suspended (after a short fade) whenever it is not needed
+  // iOS plays a page's Web Audio in an "ambient" session that the silent switch mutes; a "playback"
+  // session is not muted (navigator.audioSession: Safari 16.4 on, absent elsewhere)
+  function audioSession(type) {
+    try {
+      if (navigator.audioSession) navigator.audioSession.type = type;
+    } catch {
+      /* unsupported */
+    }
+  }
+
   function soundSync() {
     const go = snd.want && running && !document.hidden;
 
-    // iOS plays a page's Web Audio in an "ambient" session that the silent switch mutes; a
-    // "playback" session is not muted (navigator.audioSession: Safari 16.4 on, absent elsewhere)
-    const session = (type) => {
-      try {
-        if (navigator.audioSession) navigator.audioSession.type = type;
-      } catch (e) {
-        /* unsupported */
-      }
-    };
-
-    if (go) session("playback");
+    if (go) audioSession("playback");
 
     if (go && !snd.ctx && snd.armed) {
       try {
         snd.ctx = new AudioContext({ latencyHint: "playback" });
         snd.kit = soundKit(snd.ctx);
-        snd.ctx.addEventListener("statechange", soundHint);
-      } catch (e) {
+        snd.ctx.addEventListener("statechange", () => soundHint());
+      } catch {
         snd.ctx = snd.kit = null;
         snd.want = false;
         soundHint("このブラウザでは音を出せません。");
@@ -4099,7 +4114,7 @@ void main() {
         g.setTargetAtTime(0, now, 0.08);
         snd.stop = setTimeout(() => {
           if (snd.ctx.state === "running") snd.ctx.suspend();
-          session("auto");
+          audioSession("auto");
         }, 500);
       }
     }
@@ -4107,10 +4122,11 @@ void main() {
     soundHint();
   }
 
+  // without `text`, the hint the sound's state calls for
   function soundHint(text) {
     const h = $("sound-hint");
 
-    if (typeof text !== "string") {
+    if (text === undefined) {
       text = "";
 
       if (snd.want && !running)

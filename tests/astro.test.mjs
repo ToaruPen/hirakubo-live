@@ -83,21 +83,22 @@ const PHASES = [
   ["下弦 2026-01-11 00:48", jst(2026, 1, 11, 0, 48), 270],
 ];
 
+// how far the elongation is past `target` at `ms`, in -180..180°
+const pastPhase = (ms, target) => {
+  const b = E.bodies(ms);
+
+  return ((((b.lamMoon - b.lamSun - target) % 360) + 540) % 360) - 180;
+};
+
 for (const [name, when, target] of PHASES) {
   test(`moon: ${name}`, () => {
-    const off = (ms) => {
-      const b = E.bodies(ms);
-
-      return ((((b.lamMoon - b.lamSun - target) % 360) + 540) % 360) - 180;
-    };
-
     let a = when - 12 * 3600e3;
     let c = when + 12 * 3600e3;
 
     for (let k = 0; k < 50; k++) {
       const m = (a + c) / 2;
 
-      if (off(a) < 0 === off(m) < 0) a = m;
+      if (pastPhase(a, target) < 0 === pastPhase(m, target) < 0) a = m;
       else c = m;
     }
 

@@ -17,8 +17,14 @@ const HKEnv = (() => {
   };
 
   const JST = 9 * 3600e3;
-  const norm360 = (x) => ((x % 360) + 360) % 360;
-  const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
+
+  function norm360(x) {
+    return ((x % 360) + 360) % 360;
+  }
+
+  function clamp(v, a, b) {
+    return v < a ? a : v > b ? b : v;
+  }
 
   const smooth01 = (x) => {
     x = clamp(x, 0, 1);
@@ -26,8 +32,13 @@ const HKEnv = (() => {
     return x * x * (3 - 2 * x);
   };
 
-  const lerp = (a, b, t) => a + (b - a) * t;
-  const julian = (ms) => ms / 86400000 + 2440587.5;
+  function lerp(a, b, t) {
+    return a + (b - a) * t;
+  }
+
+  function julian(ms) {
+    return ms / 86400000 + 2440587.5;
+  }
 
   // ------------------------------------------------------------------ sun and moon
   function sunEcliptic(J) {
@@ -239,7 +250,9 @@ const HKEnv = (() => {
     g: 0.8,
   };
 
-  const ozone = (h) => Math.max(0, 1 - Math.abs(h - 25000) / 15000);
+  function ozone(h) {
+    return Math.max(0, 1 - Math.abs(h - 25000) / 15000);
+  }
 
   function depthTo(r0, mu, n) {
     // optical depths to the top of the atmosphere, or null if the ground is in the way
@@ -417,11 +430,11 @@ const HKEnv = (() => {
   }
 
   // ------------------------------------------------------------------ colour
-  const lin = (c) => {
+  function lin(c) {
     c /= 255;
 
     return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
-  };
+  }
 
   const enc = (v) => {
     v = clamp(v, 0, 1);
@@ -429,7 +442,9 @@ const HKEnv = (() => {
     return Math.round(255 * (v <= 0.0031308 ? 12.92 * v : 1.055 * v ** (1 / 2.4) - 0.055));
   };
 
-  const lum = (c) => 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
+  function lum(c) {
+    return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
+  }
 
   function tone(c) {
     // soft shoulder above 0.9 (linear) that keeps the hue

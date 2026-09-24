@@ -63,6 +63,7 @@ test("the loop mode stays as close to hirakubo_loop.py as when measured", async 
   for (const [frame, measured] of LOOP_MISMATCH) {
     const png = readFileSync(join(dir, `loop_${frame}.png`)).toString("base64");
 
+    // oxlint-disable-next-line no-await-in-loop -- one page renders the frames one after another
     const differing = await page.evaluate(
       async ([i, b64]) => {
         const got = window.HK.renderLoop(Number(i));
@@ -126,6 +127,7 @@ test.describe("on a phone", () => {
           fire("pointerdown", 300);
 
           for (let k = 1; k <= 20; k++) {
+            // oxlint-disable-next-line no-await-in-loop -- the moves are spaced in time, like a finger's
             await new Promise((resolve) => setTimeout(resolve, 16));
             fire("pointermove", 300 + (Number(distance) * k) / 20);
           }
