@@ -28,8 +28,10 @@ T.cls = (x, y) => {
 T.ref = async (path) => {
   const b = await (await fetch(path)).blob();
   const bm = await createImageBitmap(b, { colorSpaceConversion: "none", premultiplyAlpha: "none" });
+
   const c = new OffscreenCanvas(W, H),
     g = c.getContext("2d");
+
   g.drawImage(bm, 0, 0);
 
   return g.getImageData(0, 0, W, H).data;
@@ -118,11 +120,13 @@ T.motion = (t0, frames = 240) => {
 
   for (let y = 0; y < H; y++)
     for (let x = 0; x < W; x++) cls[y * W + x] = regions.indexOf(T.cls(x, y));
+
   const ch = regions.map(() => 0),
     bl = regions.map(() => 0),
     tot = regions.map(() => 0);
 
   for (let i = 0; i < W * H; i++) tot[cls[i]]++;
+
   let a = HK.renderLive(t0),
     b = HK.renderLive(t0 + 1 / 60);
 
@@ -180,14 +184,17 @@ T.grid = (items, cols = 3) => {
   const w = 320,
     h = 180,
     rows = Math.ceil(items.length / cols);
+
   c.width = cols * w;
   c.height = rows * h;
   const z = Math.min(innerWidth / c.width, innerHeight / c.height);
   c.style.width = c.width * z + "px";
   c.style.height = c.height * z + "px";
+
   const g = c.getContext("2d"),
     tmp = new OffscreenCanvas(W, H),
     tg = tmp.getContext("2d");
+
   items.forEach((it, k) => {
     tg.putImageData(new ImageData(new Uint8ClampedArray(it.px), W, H), 0, 0);
     g.imageSmoothingEnabled = false;

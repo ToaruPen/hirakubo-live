@@ -4,6 +4,7 @@ window.M = {
     const sr = buf.sampleRate,
       i0 = Math.floor(a * sr),
       i1 = Math.min(Math.floor(b * sr), buf.length);
+
     let pk = 0,
       s = 0,
       n = 0;
@@ -46,7 +47,9 @@ window.M = {
       e = buf.getChannelData(1),
       i0 = Math.floor(a * sr),
       i1 = Math.floor(b * sr);
+
     const k = 2 * Math.cos((2 * Math.PI * f) / sr);
+
     let s1 = 0,
       s2 = 0;
 
@@ -80,6 +83,7 @@ window.M = {
       d = buf.getChannelData(0),
       e = buf.getChannelData(1),
       w = Math.round(0.005 * sr);
+
     let mx = 0;
     const env = [];
 
