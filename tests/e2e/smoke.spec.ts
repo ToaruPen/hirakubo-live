@@ -116,7 +116,7 @@ test.describe("on a phone", () => {
             canvas.dispatchEvent(
               new PointerEvent(name, {
                 pointerId: 7,
-                pointerType: String(type),
+                pointerType: type,
                 clientX: x,
                 clientY: 400,
                 bubbles: true,

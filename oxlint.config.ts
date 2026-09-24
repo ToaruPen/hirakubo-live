@@ -3,20 +3,12 @@ import { defineConfig } from "oxlint";
 // Policy: every enabled rule is an error. Fix the code, or disable a rule at the call site with a
 // comment that says why it does not apply there.
 export default defineConfig({
-  env: { browser: true, node: true, es2024: true },
-  // hirakubo_env.js defines HKEnv; the build inlines it before the page's own script
-  globals: { HKEnv: "readonly" },
   categories: {
     correctness: "error",
     suspicious: "error",
     perf: "error",
   },
-  ignorePatterns: [
-    ".claude/**",
-    "tools/oxlint/anti-slop/**",
-    "hirakubo_live/**",
-    "node_modules/**",
-  ],
+  ignorePatterns: ["tools/oxlint/anti-slop/**"],
   jsPlugins: [{ name: "anti-slop", specifier: "./tools/oxlint/anti-slop/index.ts" }],
   rules: {
     "oxc/no-accumulating-spread": "error",
