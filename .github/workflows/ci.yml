@@ -1,0 +1,142 @@
+name: CI and deploy
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      deploy:
+        description: Deploy the page built by this run (main only)
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: Lint and unit tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    concurrency:
+      group: lint-${{ github.ref }}
+      cancel-in-progress: true
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "24"
+          cache: pnpm
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          version: "0.9.13"
+      - run: pnpm install --frozen-lockfile
+      - run: uv sync --locked
+      - name: oxlint (with anti-slop), oxfmt and ruff
+        run: pnpm lint
+      - name: Sun, moon and time zone tests
+        run: pnpm test
+
+  build:
+    name: Build and browser tests
+    # the build draws glyphs with a font that only macOS has (ヒラギノ明朝 ProN)
+    runs-on: macos-26
+    timeout-minutes: 20
+    concurrency:
+      group: build-${{ github.ref }}
+      cancel-in-progress: true
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "24"
+          cache: pnpm
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          version: "0.9.13"
+      - run: pnpm install --frozen-lockfile
+      - run: uv sync --locked
+      - name: The font the build needs is there
+        run: test -f "/System/Library/Fonts/ヒラギノ明朝 ProN.ttc"
+      - name: The committed stills are what hirakubo_pixel.py draws
+        run: |
+          uv run python hirakubo_pixel.py
+          git diff --exit-code -- '*.png'
+      - name: Frame 0 of the loop is the still
+        run: uv run python hirakubo_loop.py --gate
+      - name: Build the page (checks the layer split first)
+        run: pnpm build
+      - run: pnpm exec playwright install chromium --only-shell
+      - name: The page starts, matches hirakubo_loop.py and pans on a phone
+        run: pnpm e2e
+      - name: Checksum of the page
+        run: |
+          sum=$(shasum -a 256 hirakubo_live/index.html | cut -d' ' -f1)
+          echo "SHA-256 of hirakubo_live/index.html: \`$sum\`" >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: site-${{ github.sha }}
+          path: hirakubo_live/index.html
+          if-no-files-found: error
+          retention-days: 14
+
+  deploy:
+    name: Deploy to hirakubo.toarupen.org
+    needs: [lint, build]
+    # off until the repository variable CLOUDFLARE_ACCOUNT_ID is set (see README)
+    if: >-
+      vars.CLOUDFLARE_ACCOUNT_ID != '' &&
+      github.ref == 'refs/heads/main' &&
+      (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.deploy))
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: production
+      url: https://hirakubo.toarupen.org/
+    # never cancel a deployment that has started
+    concurrency:
+      group: production
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "24"
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: site-${{ github.sha }}
+          path: hirakubo_live
+      - name: Deploy the page the build job tested
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+          WRANGLER_SEND_METRICS: "false"
+        run: |
+          test -n "$CLOUDFLARE_API_TOKEN" || { echo 'CLOUDFLARE_API_TOKEN is not set for the production environment'; exit 1; }
+          current_main=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq .object.sha)
+          test "$current_main" = "$GITHUB_SHA" || { echo 'Refusing to deploy a superseded main commit'; exit 1; }
+          pnpm exec wrangler deploy
+      - name: The site serves the deployed page
+        run: |
+          want=$(shasum -a 256 hirakubo_live/index.html | cut -d' ' -f1)
+          for _ in 1 2 3 4 5 6; do
+            got=$(curl --fail --silent --show-error https://hirakubo.toarupen.org/ | shasum -a 256 | cut -d' ' -f1) || got=
+            if [ "$got" = "$want" ]; then echo "serving $want"; exit 0; fi
+            sleep 10
+          done
+          echo "the site serves $got, not $want"
+          exit 1
