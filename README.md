@@ -103,7 +103,7 @@ M.stats((await HK.soundTest({ dur: 8 })).buf); // 8 秒の音のピークと RMS
 
 ## CI/CD
 
-`.github/workflows/ci.yml` が、プルリクエストと main への push で動きます。
+`.github/workflows/ci.yml` は、プルリクエスト、main への push、手動実行（Actions → CI and deploy → Run workflow）で動きます。
 
 | ジョブ | 実行環境 | 内容                                          |
 | ------ | -------- | --------------------------------------------- |
@@ -119,7 +119,7 @@ build ジョブが確かめること:
 - e2e が通ること
 - ページを成果物として保存し、そのハッシュを記録すること
 
-deploy ジョブが動くのは main への push 時だけです。production 環境で承認されると、build ジョブが検査したページをそのまま `wrangler deploy` します。そのあと、公開 URL のページのハッシュが成果物と一致するかを確かめます。
+deploy ジョブが動くのは、main への push 時と、main で「deploy」にチェックを入れて手動実行したときだけです。production 環境で承認されると、build ジョブが検査したページをそのまま `wrangler deploy` します。そのあと、公開 URL のページのハッシュが成果物と一致するかを確かめます。
 
 ### デプロイを有効にする
 
@@ -130,6 +130,8 @@ deploy ジョブは、リポジトリ変数 `CLOUDFLARE_ACCOUNT_ID` が空のあ
 3. Settings → Secrets and variables → Actions → Variables に、`CLOUDFLARE_ACCOUNT_ID`（Cloudflare のアカウント ID）を登録します。
 
 これ以降、main に push するたびに deploy ジョブが承認待ちになります。Actions の実行画面の「Review deployments」で承認すると公開されます。
+
+コードを変えずに今の main を公開し直すには、Actions → CI and deploy → Run workflow で「deploy」にチェックを入れて実行し、同じように承認します。
 
 ## ライセンス
 
