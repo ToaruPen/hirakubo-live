@@ -91,7 +91,7 @@ jobs:
   deploy:
     name: Deploy to hirakubo.toarupen.org
     needs: [lint, build]
-    # off until the repository variable CLOUDFLARE_ACCOUNT_ID is set (see README)
+    # off until the repository variable CLOUDFLARE_ACCOUNT_ID is set (see AGENTS.md)
     if: >-
       vars.CLOUDFLARE_ACCOUNT_ID != '' &&
       github.ref == 'refs/heads/main' &&

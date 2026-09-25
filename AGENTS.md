@@ -25,7 +25,7 @@ in Wallpaper Engine. User-facing text is Japanese; code, comments and commits ar
 - The page's loop mode is a port of `hirakubo_loop.py`. `pnpm e2e` bounds its pixel difference
   from the Python frames at 0, 360 and 1100; float32 on the GPU keeps it from being zero.
 - For changes to the live scenes, compare pixel hashes before and after on the same machine
-  with `tools/harness/` (see README). Hashes differ between GPUs, so they are not in CI.
+  with `tools/harness/` (below). Hashes differ between GPUs, so they are not in CI.
 - `glyph_mask` renders with `/System/Library/Fonts/ヒラギノ明朝 ProN.ttc`, so building needs
   macOS. CI builds on `macos-26`.
 - numpy and Pillow are pinned exactly: the data is float64 and the glyphs come from Pillow's
@@ -59,5 +59,23 @@ unused disables fail the lint. Never turn a rule off in the config.
 - `pnpm e2e` — Playwright on SwiftShader against the built page (`pnpm build` first; browser via
   `pnpm exec playwright install chromium --only-shell`)
 - `pnpm check` — lint + test; must pass before every commit
-- Deploy only through CI (`.github/workflows/ci.yml`, environment `production`, approved by the
-  owner). `pnpm deploy` exists for the owner and needs their Cloudflare login.
+- `pnpm deploy` — build + `wrangler deploy` with the owner's Cloudflare login; only when the owner
+  asks
+
+## Pixel-hash harness
+
+Serve the repository root (`uv run python -m http.server 8000`), open
+`http://localhost:8000/hirakubo_live/index.html#test`, load `/tools/harness/sound_harness.js`
+from the console and `await boot()`. Then `hh(HK.renderLoop(360))`,
+`hh(T.envFrame([2026, 9, 5], 21, 3, 60).px)` (date, JST hour, regime index, seconds) and
+`M.stats((await HK.soundTest({ dur: 8 })).buf)` give values to compare before and after a change.
+Load the page afresh for each comparison: state carries over between scenes.
+
+## Deploy
+
+`.github/workflows/ci.yml` deploys on a push to `main`, or a manual run with `deploy` checked,
+only while the repository variable `CLOUDFLARE_ACCOUNT_ID` is set. The job waits for the owner's
+approval in the `production` environment (branch `main` only), which holds the secret
+`CLOUDFLARE_API_TOKEN` (template "Edit Cloudflare Workers" including the toarupen.org zone: the
+custom domain needs Workers Routes). It deploys the page the build job tested, then checks that
+the site serves that page's SHA-256. Agents never handle the token.
