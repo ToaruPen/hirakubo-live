@@ -135,4 +135,4 @@ deploy ジョブは、リポジトリ変数 `CLOUDFLARE_ACCOUNT_ID` が空のあ
 
 ## ライセンス
 
-まだ設定していません（著作権は作者に帰属します）。ただし `tools/oxlint/anti-slop/` は MIT ライセンスです（Copyright 2026 Dillon Mulroy）。
+[MIT](LICENSE)。コードも絵（PNG）も同じ条件です。`tools/oxlint/anti-slop/` は取り込んだ別の著作物で、こちらも MIT です（Copyright 2026 Dillon Mulroy、`tools/oxlint/anti-slop/LICENSE`）。
